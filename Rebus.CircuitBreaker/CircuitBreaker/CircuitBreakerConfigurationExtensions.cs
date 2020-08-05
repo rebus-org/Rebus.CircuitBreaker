@@ -26,9 +26,9 @@ namespace Rebus.CircuitBreaker
             circuitBreakerBuilder?.Invoke(builder);
             var circuitBreakers = builder.Build();
 
-            optionsConfigurer.Decorate<IErrorHandler>(c => 
+            optionsConfigurer.Decorate<IErrorTracker>(c => 
             {
-                var innerErrorHandler = c.Get<IErrorHandler>();
+                var innerErrorTracker = c.Get<IErrorTracker>();
                 var loggerFactory = c.Get<IRebusLoggerFactory>();
                 var asyncTaskFactory = c.Get<IAsyncTaskFactory>();
                 var rebusBus = c.Get<RebusBus>();
@@ -37,9 +37,9 @@ namespace Rebus.CircuitBreaker
                 optionsConfigurer.Register(r => circuitBreakerEvents);
                 
                 var circuitBreaker = new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, rebusBus, circuitBreakerEvents);
-                optionsConfigurer.Register<IInitializable>(x => circuitBreaker);
+                optionsConfigurer.Register<IInitializable>(x => circuitBreaker); // TODO: Do we need to manually start the Initializeable?
 
-                return new CircuitBreakerErrorHandler(circuitBreaker, innerErrorHandler, loggerFactory);
+                return new CircuitBreakerErrorTracker(innerErrorTracker, circuitBreaker);
             });
         }
 
