@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Rebus.Retry.CircuitBreaker
+namespace Rebus.CircuitBreaker
 {
-    internal class MainCircuitBreaker : ICircuitBreaker, IInitializable, IDisposable
+    public class MainCircuitBreaker : ICircuitBreaker, IInitializable, IDisposable
     {
         const string BackgroundTaskName = "CircuitBreakersResetTimer";
 
@@ -16,7 +16,7 @@ namespace Rebus.Retry.CircuitBreaker
 
         readonly IList<ICircuitBreaker> _circuitBreakers;
         readonly RebusBus _rebusBus;
-        readonly BusLifetimeEvents _busLifetimeEvents;
+        readonly CircuitBreakerEvents _circuitBreakerEvents;
         readonly ILog _log;
 
         int _configuredNumberOfWorkers;
@@ -27,12 +27,12 @@ namespace Rebus.Retry.CircuitBreaker
             , IRebusLoggerFactory rebusLoggerFactory
             , IAsyncTaskFactory asyncTaskFactory
             , RebusBus rebusBus
-            , BusLifetimeEvents busLifetimeEvents)
+            , CircuitBreakerEvents circuitBreakerEvents)
         {
             _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
             _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
             _rebusBus = rebusBus;
-            _busLifetimeEvents = busLifetimeEvents;
+            _circuitBreakerEvents = circuitBreakerEvents;
 
             _resetCircuitBreakerTask = asyncTaskFactory.Create(
                 BackgroundTaskName
@@ -66,7 +66,7 @@ namespace Rebus.Retry.CircuitBreaker
                 return;
 
             _log.Info("Circuit breaker change from {PreviousState} to {State}", previousState, State);
-            _busLifetimeEvents.RaiseCircuitBreakerChanged(State);
+            _circuitBreakerEvents.RaiseCircuitBreakerChanged(State);
 
             if (IsClosed) 
             {

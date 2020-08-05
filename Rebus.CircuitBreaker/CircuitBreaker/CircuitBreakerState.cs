@@ -1,4 +1,4 @@
-﻿namespace Rebus.Retry.CircuitBreaker
+﻿namespace Rebus.CircuitBreaker
 {
     /// <summary>
     /// Describes the state of the circuit breaker

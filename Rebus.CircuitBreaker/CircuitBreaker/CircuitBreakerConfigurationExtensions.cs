@@ -1,12 +1,13 @@
 ﻿using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Logging;
+using Rebus.Retry;
 using Rebus.Threading;
 using Rebus.Time;
 using System;
 using System.Collections.Generic;
 
-namespace Rebus.Retry.CircuitBreaker
+namespace Rebus.CircuitBreaker
 {
     /// <summary>
     /// Configuration extensions for the Circuit breakers
@@ -31,9 +32,11 @@ namespace Rebus.Retry.CircuitBreaker
                 var loggerFactory = c.Get<IRebusLoggerFactory>();
                 var asyncTaskFactory = c.Get<IAsyncTaskFactory>();
                 var rebusBus = c.Get<RebusBus>();
-                var busLifetimeEvents = c.Get<BusLifetimeEvents>();
-                var circuitBreaker = new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, rebusBus, busLifetimeEvents);
                 
+                var circuitBreakerEvents = new CircuitBreakerEvents();
+                optionsConfigurer.Register(r => circuitBreakerEvents);
+                
+                var circuitBreaker = new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, rebusBus, circuitBreakerEvents);
                 optionsConfigurer.Register<IInitializable>(x => circuitBreaker);
 
                 return new CircuitBreakerErrorHandler(circuitBreaker, innerErrorHandler, loggerFactory);

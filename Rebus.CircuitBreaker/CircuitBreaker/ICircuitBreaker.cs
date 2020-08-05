@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Rebus.Retry.CircuitBreaker
+namespace Rebus.CircuitBreaker
 {
-    internal interface ICircuitBreaker
+    public interface ICircuitBreaker
     {
         CircuitBreakerState State { get; }
         bool IsClosed { get; }

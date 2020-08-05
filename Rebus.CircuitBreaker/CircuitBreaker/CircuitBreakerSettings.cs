@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Rebus.Retry.CircuitBreaker
+namespace Rebus.CircuitBreaker
 {
     /// <summary>
     /// Contains the settings used by <see cref="CircuitBreakerSettings"/>

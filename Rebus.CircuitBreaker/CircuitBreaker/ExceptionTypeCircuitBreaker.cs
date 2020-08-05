@@ -5,10 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Rebus.Retry.CircuitBreaker
+namespace Rebus.CircuitBreaker
 {
 
-    internal class ExceptionTypeCircuitBreaker : ICircuitBreaker
+    public class ExceptionTypeCircuitBreaker : ICircuitBreaker
     {
         private readonly Type exceptionType;
         private readonly CircuitBreakerSettings settings;

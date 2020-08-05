@@ -1,10 +1,11 @@
 ﻿using Rebus.Logging;
 using Rebus.Messages;
+using Rebus.Retry;
 using Rebus.Transport;
 using System;
 using System.Threading.Tasks;
 
-namespace Rebus.Retry.CircuitBreaker
+namespace Rebus.CircuitBreaker
 {
     internal class CircuitBreakerErrorHandler : IErrorHandler
     {
