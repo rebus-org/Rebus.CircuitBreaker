@@ -48,9 +48,17 @@ namespace Rebus.CircuitBreaker
                 .Where(x => x.Key > timeStamp.Ticks - settings.TrackingPeriod.Ticks)
                 .Take(settings.Attempts);
 
-            // Do the tripping
-            if (errorsInPeriod.Count() >= settings.Attempts)
+            var numberOfErrorsInPeriod = errorsInPeriod.Count();
+            if (IsInRecoveringState(numberOfErrorsInPeriod))
             {
+                State = CircuitBreakerState.Open;
+                return;
+            }
+
+            // Do the tripping
+            if (numberOfErrorsInPeriod >= settings.Attempts)
+            {
+
                 State = CircuitBreakerState.Open;
             }
 
@@ -72,6 +80,11 @@ namespace Rebus.CircuitBreaker
             return false;
         }
 
+        private bool IsInRecoveringState(int numberOfErrorsInPeriod)
+        {
+            return numberOfErrorsInPeriod == 1 && IsHalfOpen;
+        }
+
         private void RemoveOutOfPeriodErrors(IEnumerable<KeyValuePair<long, DateTimeOffset>> tripsInPeriod)
         {
             var outDatedTimeStamps = _errorDates
@@ -84,9 +97,24 @@ namespace Rebus.CircuitBreaker
 
         public async Task Reset()
         {
+            if (IsClosed)
+                return;
 
-            // Missing .net 4.5 compatibility 
-            // await Task.CompletedTask;
+            var latestError = _errorDates
+                .OrderBy(x => x.Key)
+                .Take(1)
+                .FirstOrDefault();
+
+            if(latestError.Equals(default(KeyValuePair<int, DateTimeOffset>)))
+                return;   
+            
+            var currentTime = rebusTime.Now;
+            if (latestError.Value + settings.HalfOpenResetInterval < currentTime)
+                State = CircuitBreakerState.HalfOpen;
+
+            if (latestError.Value + settings.CloseResetInterval < currentTime)
+                State = CircuitBreakerState.Closed;
+            
             await Task.FromResult(0);
 
         }

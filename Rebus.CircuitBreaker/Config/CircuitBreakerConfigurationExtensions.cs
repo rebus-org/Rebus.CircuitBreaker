@@ -63,10 +63,11 @@ namespace Rebus.Config
             public CircuitBreakerConfigurationBuilder OpenOn<TException>(
                 int attempts = CircuitBreakerSettings.DefaultAttempts
                 , int trackingPeriodInSeconds = CircuitBreakerSettings.DefaultTrackingPeriodInSeconds
-                , int resetIntervalInSeconds = CircuitBreakerSettings.DefaultResetIntervalInSeconds)
+                , int halfOpenPeriodInSeconds = CircuitBreakerSettings.DefaultHalfOpenResetInterval
+                , int resetIntervalInSeconds = CircuitBreakerSettings.DefaultCloseResetInterval)
                 where TException : Exception
             {
-                var settings = new CircuitBreakerSettings(attempts, trackingPeriodInSeconds, resetIntervalInSeconds);
+                var settings = new CircuitBreakerSettings(attempts, trackingPeriodInSeconds, halfOpenPeriodInSeconds, resetIntervalInSeconds);
                 _circuitBreakerStores.Add(new ExceptionTypeCircuitBreaker(typeof(TException), settings, new DefaultRebusTime()));
                 return this;
             }

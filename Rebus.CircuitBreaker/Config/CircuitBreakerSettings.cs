@@ -18,9 +18,14 @@ namespace Rebus.Config
         public const int DefaultTrackingPeriodInSeconds = 30;
 
         /// <summary>
-        /// Defailt time Interval for when the circuit breaker will close after being opened 
+        /// Default time Interval for when the circuit breaker will move to Half Open after being in an Open State
         /// </summary>
-        public const int DefaultResetIntervalInSeconds = 300;
+        public const int DefaultHalfOpenResetInterval = 150;
+
+        /// <summary>
+        /// Default time Interval for when the circuit breaker will close after being opened 
+        /// </summary>
+        public const int DefaultCloseResetInterval = 300;
 
         /// <summary>
         /// Number of attempts that the circuit breaker will fail within a given <see cref="TrackingPeriod"/>
@@ -35,16 +40,22 @@ namespace Rebus.Config
         /// <summary>
         /// Time Interval for when the circuit breaker will close after being opened
         /// </summary>
-        internal TimeSpan ResetInterval { get; private set; }
+        internal TimeSpan CloseResetInterval { get; private set; }
+
+        /// <summary>
+        /// Time Interval for when the circuit breaker will move to Half Open after being in an Open State
+        /// </summary>
+        internal TimeSpan HalfOpenResetInterval { get; private set; }
 
         /// <summary>
         /// Create a setting for a given circuit breaker
         /// </summary>
-        internal CircuitBreakerSettings(int attempts, int trackingPeriodInSeconds, int resetIntervalInSeconds)
+        internal CircuitBreakerSettings(int attempts, int trackingPeriodInSeconds, int halfOpenResetIntervalInSeconds, int closedResetIntervalInSeconds)
         {
             Attempts = attempts;
             TrackingPeriod = TimeSpan.FromSeconds(trackingPeriodInSeconds);
-            ResetInterval = TimeSpan.FromSeconds(resetIntervalInSeconds);
+            HalfOpenResetInterval = TimeSpan.FromSeconds(halfOpenResetIntervalInSeconds);
+            CloseResetInterval = TimeSpan.FromSeconds(closedResetIntervalInSeconds);
         }
     }
 }
