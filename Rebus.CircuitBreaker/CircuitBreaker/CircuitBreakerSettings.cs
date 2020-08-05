@@ -5,7 +5,7 @@ namespace Rebus.CircuitBreaker
     /// <summary>
     /// Contains the settings used by <see cref="CircuitBreakerSettings"/>
     /// </summary>
-    public class CircuitBreakerSettings
+    internal class CircuitBreakerSettings
     {
         /// <summary>
         /// Default Attempts a circuit breaker will fail within a given <see cref="TrackingPeriod"/>

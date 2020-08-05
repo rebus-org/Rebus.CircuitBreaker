@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Rebus.CircuitBreaker
 {
-    public class MainCircuitBreaker : ICircuitBreaker, IInitializable, IDisposable
+    internal class MainCircuitBreaker : ICircuitBreaker, IInitializable, IDisposable
     {
         const string BackgroundTaskName = "CircuitBreakersResetTimer";
 

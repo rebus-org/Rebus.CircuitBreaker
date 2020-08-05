@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Rebus.CircuitBreaker
 {
 
-    public class ExceptionTypeCircuitBreaker : ICircuitBreaker
+    internal class ExceptionTypeCircuitBreaker : ICircuitBreaker
     {
         private readonly Type exceptionType;
         private readonly CircuitBreakerSettings settings;

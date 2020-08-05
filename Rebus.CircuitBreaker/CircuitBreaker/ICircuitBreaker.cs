@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Rebus.CircuitBreaker
 {
-    public interface ICircuitBreaker
+    internal interface ICircuitBreaker
     {
         CircuitBreakerState State { get; }
         bool IsClosed { get; }
