@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
-using Rebus.Retry.CircuitBreaker;
-using Rebus.Tests.Time;
+using Rebus.CircuitBreaker;
+using Rebus.TestHelpers;
 using Rebus.Time;
 using System;
 using System.Threading.Tasks;

@@ -1,11 +1,10 @@
 ﻿using NUnit.Framework;
 using Rebus.Activation;
+using Rebus.CircuitBreaker;
+using Rebus.CircuitBreaker.Tests;
 using Rebus.Config;
-using Rebus.Retry.CircuitBreaker;
-using Rebus.Tests.Contracts;
 using Rebus.Transport.InMem;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rebus.Tests.Retry.CircuitBreaker
