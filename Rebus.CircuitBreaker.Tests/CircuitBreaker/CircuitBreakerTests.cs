@@ -1,13 +1,12 @@
 ﻿using NUnit.Framework;
 using Rebus.Activation;
-using Rebus.CircuitBreaker;
 using Rebus.CircuitBreaker.Tests;
 using Rebus.Config;
 using Rebus.Transport.InMem;
 using System;
 using System.Threading.Tasks;
 
-namespace Rebus.Tests.Retry.CircuitBreaker
+namespace Rebus.Tests.CircuitBreaker
 {
     [TestFixture]
     public class CircuitBreakerTests : FixtureBase

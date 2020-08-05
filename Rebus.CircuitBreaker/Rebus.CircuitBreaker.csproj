@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Config\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Rebus" Version="6.0.0" />
   </ItemGroup>
 

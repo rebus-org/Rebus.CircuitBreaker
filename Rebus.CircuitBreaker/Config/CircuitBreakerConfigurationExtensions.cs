@@ -1,5 +1,5 @@
 ﻿using Rebus.Bus;
-using Rebus.Config;
+using Rebus.CircuitBreaker;
 using Rebus.Logging;
 using Rebus.Retry;
 using Rebus.Threading;
@@ -7,7 +7,7 @@ using Rebus.Time;
 using System;
 using System.Collections.Generic;
 
-namespace Rebus.CircuitBreaker
+namespace Rebus.Config
 {
     /// <summary>
     /// Configuration extensions for the Circuit breakers

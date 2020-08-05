@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Rebus.CircuitBreaker
+namespace Rebus.Config
 {
     /// <summary>
     /// Contains the settings used by <see cref="CircuitBreakerSettings"/>
@@ -25,22 +25,22 @@ namespace Rebus.CircuitBreaker
         /// <summary>
         /// Number of attempts that the circuit breaker will fail within a given <see cref="TrackingPeriod"/>
         /// </summary>
-        public int Attempts { get; private set; }
+        internal int Attempts { get; private set; }
 
         /// <summary>
         /// Time window wherein consecutive errors are getting tracked
         /// </summary>
-        public TimeSpan TrackingPeriod { get; private set; }
+        internal TimeSpan TrackingPeriod { get; private set; }
 
         /// <summary>
         /// Time Interval for when the circuit breaker will close after being opened
         /// </summary>
-        public TimeSpan ResetInterval { get; private set; }
+        internal TimeSpan ResetInterval { get; private set; }
 
         /// <summary>
         /// Create a setting for a given circuit breaker
         /// </summary>
-        public CircuitBreakerSettings(int attempts, int trackingPeriodInSeconds, int resetIntervalInSeconds)
+        internal CircuitBreakerSettings(int attempts, int trackingPeriodInSeconds, int resetIntervalInSeconds)
         {
             Attempts = attempts;
             TrackingPeriod = TimeSpan.FromSeconds(trackingPeriodInSeconds);

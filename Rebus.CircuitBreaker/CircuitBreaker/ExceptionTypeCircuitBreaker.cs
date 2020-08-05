@@ -1,4 +1,5 @@
-﻿using Rebus.Time;
+﻿using Rebus.Config;
+using Rebus.Time;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

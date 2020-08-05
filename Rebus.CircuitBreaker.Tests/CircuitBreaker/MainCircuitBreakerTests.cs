@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Rebus.Tests.Retry.CircuitBreaker
+namespace Rebus.Tests.CircuitBreaker
 {
     [TestFixture]
     public class MainCircuitBreakerTests 
