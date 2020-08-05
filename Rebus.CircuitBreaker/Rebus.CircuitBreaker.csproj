@@ -7,7 +7,10 @@
 
   <ItemGroup>
     <Folder Include="Config\" />
-    <Folder Include="CircuitBreaker\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Rebus" Version="6.0.0" />
   </ItemGroup>
 
 </Project>
