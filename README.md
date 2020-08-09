@@ -33,7 +33,7 @@ For each exception you can configure it with the following parameters.
 
 If you want to add custom logic when the state of the circuit breaker changes, you can do this i three easy steps
 
-1. Create your Event Listener
+**1. Create your Event Listener**
 
 ```csharp
 public class MyCustomCircuitBreakerEventListener : IDisposable
@@ -60,9 +60,9 @@ public class MyCustomCircuitBreakerEventListener : IDisposable
 ```
 
 
-2. Create a customers options configurer
+**2. Create a custom Rebus OptionsConfigurer Extension**
 ```csharp
-public static class MyCustomOptionsConfigurer
+public static class MyCustomOptionsConfigurerExtensions
 {
     public static void RegisterMyCustomCircuitBreakerEventListener(this OptionsConfigurer self) 
     {
@@ -71,7 +71,7 @@ public static class MyCustomOptionsConfigurer
 }
 ```
 
-3. Configure Rebus
+**3. Configure Rebus**
 
 ```csharp
 Configure.With(...)
