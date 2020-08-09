@@ -65,7 +65,7 @@ namespace Rebus.CircuitBreaker
             if (previousState == State)
                 return;
 
-            _log.Info("Circuit breaker change from {PreviousState} to {State}", previousState, State);
+            _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, State);
             _circuitBreakerEvents.RaiseCircuitBreakerChanged(State);
 
             if (IsClosed) 
