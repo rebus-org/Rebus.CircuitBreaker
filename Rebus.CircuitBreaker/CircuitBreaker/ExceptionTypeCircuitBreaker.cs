@@ -109,10 +109,11 @@ namespace Rebus.CircuitBreaker
                 return;   
             
             var currentTime = rebusTime.Now;
-            if (latestError.Value + settings.HalfOpenResetInterval < currentTime)
+
+            if (currentTime > latestError.Value + settings.HalfOpenResetInterval)
                 State = CircuitBreakerState.HalfOpen;
 
-            if (latestError.Value + settings.CloseResetInterval < currentTime)
+            if (currentTime > latestError.Value + settings.CloseResetInterval)
                 State = CircuitBreakerState.Closed;
             
             await Task.FromResult(0);
