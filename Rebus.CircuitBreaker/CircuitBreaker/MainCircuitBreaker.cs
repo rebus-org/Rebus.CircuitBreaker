@@ -41,10 +41,12 @@ namespace Rebus.CircuitBreaker
                 , intervalSeconds: 5);
         }
 
-        public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incomming) =>
+        public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) =>
         {
-            if (incomming.State > currentState)
-                return incomming.State;
+            if (incoming.State > currentState)
+            {
+                return incoming.State;
+            }
 
             return currentState;
         });
@@ -60,10 +62,14 @@ namespace Rebus.CircuitBreaker
             var previousState = State;
 
             foreach (var circuitBreaker in _circuitBreakers)
+            {
                 circuitBreaker.Trip(exception);
+            }
 
             if (previousState == State)
+            {
                 return;
+            }
 
             _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, State);
             _circuitBreakerEvents.RaiseCircuitBreakerChanged(State);
@@ -91,11 +97,15 @@ namespace Rebus.CircuitBreaker
         public async Task Reset()
         {
             foreach (var circuitBreaker in _circuitBreakers)
+            {
                 await circuitBreaker.Reset();
+            }
         }
 
         public void Initialize()
         {
+            _log.Info("Initializing circuit breaker");
+
             _configuredNumberOfWorkers = _rebusBus.Advanced.Workers.Count;
             _resetCircuitBreakerTask.Start();
         }

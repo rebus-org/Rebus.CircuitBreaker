@@ -1,12 +1,11 @@
-﻿using NUnit.Framework;
-using Rebus.CircuitBreaker;
+﻿using System;
+using System.Threading.Tasks;
+using NUnit.Framework;
 using Rebus.Config;
 using Rebus.TestHelpers;
 using Rebus.Time;
-using System;
-using System.Threading.Tasks;
 
-namespace Rebus.Tests.CircuitBreaker
+namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
 {
     [TestFixture]
     public class ExceptionTypeCircuitBreakerTests 

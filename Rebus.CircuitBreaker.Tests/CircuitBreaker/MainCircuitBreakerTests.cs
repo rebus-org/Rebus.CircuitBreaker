@@ -1,13 +1,12 @@
-﻿using NUnit.Framework;
-using Rebus.CircuitBreaker;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using NUnit.Framework;
 using Rebus.Logging;
 using Rebus.Threading;
 using Rebus.Threading.SystemThreadingTimer;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace Rebus.Tests.CircuitBreaker
+namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
 {
     [TestFixture]
     public class MainCircuitBreakerTests 

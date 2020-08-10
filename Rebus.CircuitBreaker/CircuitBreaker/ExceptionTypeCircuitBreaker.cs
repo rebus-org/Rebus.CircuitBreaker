@@ -5,16 +5,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+#pragma warning disable 1998
 
 namespace Rebus.CircuitBreaker
 {
-
     internal class ExceptionTypeCircuitBreaker : ICircuitBreaker
     {
-        private readonly Type exceptionType;
+        private readonly ConcurrentDictionary<long, DateTimeOffset> _errorDates;
         private readonly CircuitBreakerSettings settings;
         private readonly IRebusTime rebusTime;
-        private ConcurrentDictionary<long, DateTimeOffset> _errorDates;
+        private readonly Type exceptionType;
 
         public ExceptionTypeCircuitBreaker(Type exceptionType
             , CircuitBreakerSettings settings
@@ -22,7 +22,7 @@ namespace Rebus.CircuitBreaker
         {
             this.exceptionType = exceptionType ?? throw new ArgumentNullException(nameof(exceptionType));
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            this.rebusTime = rebusTime;
+            this.rebusTime = rebusTime ?? throw new ArgumentNullException(nameof(rebusTime));
             State = CircuitBreakerState.Closed;
 
             _errorDates = new ConcurrentDictionary<long, DateTimeOffset>();
@@ -46,9 +46,11 @@ namespace Rebus.CircuitBreaker
 
             var errorsInPeriod = _errorDates
                 .Where(x => x.Key > timeStamp.Ticks - settings.TrackingPeriod.Ticks)
-                .Take(settings.Attempts);
+                .Take(settings.Attempts)
+                .ToList();
 
-            var numberOfErrorsInPeriod = errorsInPeriod.Count();
+            var numberOfErrorsInPeriod = errorsInPeriod.Count;
+
             if (IsInRecoveringState(numberOfErrorsInPeriod))
             {
                 State = CircuitBreakerState.Open;
@@ -58,24 +60,56 @@ namespace Rebus.CircuitBreaker
             // Do the tripping
             if (numberOfErrorsInPeriod >= settings.Attempts)
             {
-
                 State = CircuitBreakerState.Open;
             }
 
             RemoveOutOfPeriodErrors(errorsInPeriod);
         }
 
-        private bool ShouldTripCircuitBreaker(Exception exception)
+        public async Task Reset()
         {
-            if (exception is AggregateException e)
+            if (IsClosed)
             {
-                var actualException = e.InnerExceptions.First();
-                if (actualException.GetType().Equals(exceptionType))
-                    return true;
+                return;
             }
 
-            if (exception.GetType().Equals(exceptionType))
+            var latestError = _errorDates
+                .OrderBy(x => x.Key)
+                .Take(1)
+                .FirstOrDefault();
+
+            if(latestError.Equals(default(KeyValuePair<int, DateTimeOffset>)))
+                return;   
+            
+            var currentTime = rebusTime.Now;
+
+            if (currentTime > latestError.Value + settings.HalfOpenResetInterval)
+            {
+                State = CircuitBreakerState.HalfOpen;
+            }
+
+            if (currentTime > latestError.Value + settings.CloseResetInterval)
+            {
+                State = CircuitBreakerState.Closed;
+            }
+        }
+
+        private bool ShouldTripCircuitBreaker(Exception exception)
+        {
+            if (exception is AggregateException aggregateException)
+            {
+                var actualException = aggregateException.InnerExceptions.First();
+                
+                if (actualException.GetType() == exceptionType)
+                {
+                    return true;
+                }
+            }
+
+            if (exception.GetType() == exceptionType)
+            {
                 return true;
+            }
 
             return false;
         }
@@ -91,33 +125,10 @@ namespace Rebus.CircuitBreaker
                 .Except(tripsInPeriod)
                 .ToList();
 
-            foreach(var outDatedTimeStamp in outDatedTimeStamps) 
+            foreach (var outDatedTimeStamp in outDatedTimeStamps)
+            {
                 _errorDates.TryRemove(outDatedTimeStamp.Key, out _);
-        }
-
-        public async Task Reset()
-        {
-            if (IsClosed)
-                return;
-
-            var latestError = _errorDates
-                .OrderBy(x => x.Key)
-                .Take(1)
-                .FirstOrDefault();
-
-            if(latestError.Equals(default(KeyValuePair<int, DateTimeOffset>)))
-                return;   
-            
-            var currentTime = rebusTime.Now;
-
-            if (currentTime > latestError.Value + settings.HalfOpenResetInterval)
-                State = CircuitBreakerState.HalfOpen;
-
-            if (currentTime > latestError.Value + settings.CloseResetInterval)
-                State = CircuitBreakerState.Closed;
-            
-            await Task.FromResult(0);
-
+            }
         }
     }
 } 

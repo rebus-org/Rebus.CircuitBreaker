@@ -19,25 +19,23 @@ namespace Rebus.Config
         /// </summary>
         /// <param name="optionsConfigurer"></param>
         /// <param name="circuitBreakerBuilder"></param>
-        public static void EnableCircuitBreaker(this OptionsConfigurer optionsConfigurer
-            , Action<CircuitBreakerConfigurationBuilder> circuitBreakerBuilder) 
+        public static void EnableCircuitBreaker(this OptionsConfigurer optionsConfigurer, Action<CircuitBreakerConfigurationBuilder> circuitBreakerBuilder)
         {
             var builder = new CircuitBreakerConfigurationBuilder();
             circuitBreakerBuilder?.Invoke(builder);
             var circuitBreakers = builder.Build();
 
-            optionsConfigurer.Decorate<IErrorTracker>(c => 
+            optionsConfigurer.Decorate<IErrorTracker>(c =>
             {
                 var innerErrorTracker = c.Get<IErrorTracker>();
                 var loggerFactory = c.Get<IRebusLoggerFactory>();
                 var asyncTaskFactory = c.Get<IAsyncTaskFactory>();
                 var rebusBus = c.Get<RebusBus>();
-                
+
                 var circuitBreakerEvents = new CircuitBreakerEvents();
                 optionsConfigurer.Register(r => circuitBreakerEvents);
-                
+
                 var circuitBreaker = new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, rebusBus, circuitBreakerEvents);
-                optionsConfigurer.Register<IInitializable>(x => circuitBreaker); // TODO: Do we need to manually start the Initializeable?
 
                 return new CircuitBreakerErrorTracker(innerErrorTracker, circuitBreaker);
             });
@@ -48,7 +46,6 @@ namespace Rebus.Config
         /// </summary>
         public class CircuitBreakerConfigurationBuilder
         {
-
             private readonly IList<ICircuitBreaker> _circuitBreakerStores;
 
             internal CircuitBreakerConfigurationBuilder()
@@ -72,10 +69,10 @@ namespace Rebus.Config
                 return this;
             }
 
-            internal IList<ICircuitBreaker> Build() 
+            internal IList<ICircuitBreaker> Build()
             {
                 return _circuitBreakerStores;
             }
-        }   
+        }
     }
 }
