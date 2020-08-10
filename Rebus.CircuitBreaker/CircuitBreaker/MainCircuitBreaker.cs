@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Rebus.Config;
 
 namespace Rebus.CircuitBreaker
 {
@@ -15,30 +16,27 @@ namespace Rebus.CircuitBreaker
         readonly IAsyncTask _resetCircuitBreakerTask;
 
         readonly IList<ICircuitBreaker> _circuitBreakers;
-        readonly RebusBus _rebusBus;
         readonly CircuitBreakerEvents _circuitBreakerEvents;
+        readonly Func<IBus> _busGetter;
+        readonly Options _options;
         readonly ILog _log;
 
         int _configuredNumberOfWorkers;
 
         bool _disposed;
 
-        public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers
-            , IRebusLoggerFactory rebusLoggerFactory
-            , IAsyncTaskFactory asyncTaskFactory
-            , RebusBus rebusBus
-            , CircuitBreakerEvents circuitBreakerEvents)
+        IBus _bus;
+        IBus Bus => _bus ?? (_bus = _busGetter());
+
+        public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Func<IBus> busGetter, CircuitBreakerEvents circuitBreakerEvents, Options options)
         {
             _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
             _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
-            _rebusBus = rebusBus;
+            _busGetter = busGetter;
             _circuitBreakerEvents = circuitBreakerEvents;
+            _options = options;
 
-            _resetCircuitBreakerTask = asyncTaskFactory.Create(
-                BackgroundTaskName
-                , Reset
-                , prettyInsignificant: false
-                , intervalSeconds: 5);
+            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: false, intervalSeconds: 5);
         }
 
         public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) =>
@@ -74,22 +72,24 @@ namespace Rebus.CircuitBreaker
             _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, State);
             _circuitBreakerEvents.RaiseCircuitBreakerChanged(State);
 
-            if (IsClosed) 
+            var workers = Bus.Advanced.Workers;
+
+            if (IsClosed)
             {
-                _rebusBus.SetNumberOfWorkers(_configuredNumberOfWorkers);
+                workers.SetNumberOfWorkers(_configuredNumberOfWorkers);
                 return;
             }
-                
 
-            if (IsHalfOpen) 
+
+            if (IsHalfOpen)
             {
-                _rebusBus.SetNumberOfWorkers(1);
+                workers.SetNumberOfWorkers(1);
                 return;
             }
 
             if (IsOpen)
             {
-                _rebusBus.SetNumberOfWorkers(0);
+                workers.SetNumberOfWorkers(0);
                 return;
             }
         }
@@ -106,7 +106,8 @@ namespace Rebus.CircuitBreaker
         {
             _log.Info("Initializing circuit breaker");
 
-            _configuredNumberOfWorkers = _rebusBus.Advanced.Workers.Count;
+            _configuredNumberOfWorkers = _options.NumberOfWorkers;
+            
             _resetCircuitBreakerTask.Start();
         }
 

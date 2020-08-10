@@ -17,25 +17,31 @@ namespace Rebus.Config
         /// <summary>
         /// Enabling fluent configuration of circuit breakers
         /// </summary>
-        /// <param name="optionsConfigurer"></param>
+        /// <param name="configurer"></param>
         /// <param name="circuitBreakerBuilder"></param>
-        public static void EnableCircuitBreaker(this OptionsConfigurer optionsConfigurer, Action<CircuitBreakerConfigurationBuilder> circuitBreakerBuilder)
+        public static void EnableCircuitBreaker(this OptionsConfigurer configurer, Action<CircuitBreakerConfigurationBuilder> circuitBreakerBuilder)
         {
             var builder = new CircuitBreakerConfigurationBuilder();
             circuitBreakerBuilder?.Invoke(builder);
             var circuitBreakers = builder.Build();
 
-            optionsConfigurer.Decorate<IErrorTracker>(c =>
+            configurer.Register(context => new CircuitBreakerEvents());
+
+            configurer.Register(context =>
             {
-                var innerErrorTracker = c.Get<IErrorTracker>();
-                var loggerFactory = c.Get<IRebusLoggerFactory>();
-                var asyncTaskFactory = c.Get<IAsyncTaskFactory>();
-                var rebusBus = c.Get<RebusBus>();
+                var loggerFactory = context.Get<IRebusLoggerFactory>();
+                var asyncTaskFactory = context.Get<IAsyncTaskFactory>();
+                var circuitBreakerEvents = context.Get<CircuitBreakerEvents>();
+                var bus = new Func<IBus>(context.Get<IBus>);
+                var options = context.Get<Options>();
 
-                var circuitBreakerEvents = new CircuitBreakerEvents();
-                optionsConfigurer.Register(r => circuitBreakerEvents);
+                return new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, bus, circuitBreakerEvents, options);
+            });
 
-                var circuitBreaker = new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, rebusBus, circuitBreakerEvents);
+            configurer.Decorate<IErrorTracker>(context =>
+            {
+                var innerErrorTracker = context.Get<IErrorTracker>();
+                var circuitBreaker = context.Get<MainCircuitBreaker>();
 
                 return new CircuitBreakerErrorTracker(innerErrorTracker, circuitBreaker);
             });
