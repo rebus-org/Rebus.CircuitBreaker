@@ -30,21 +30,21 @@ namespace Rebus.CircuitBreaker
 
         public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Func<IBus> busGetter, CircuitBreakerEvents circuitBreakerEvents, Options options)
         {
-            _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
             _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
-            _busGetter = busGetter;
+            _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
             _circuitBreakerEvents = circuitBreakerEvents;
+            _busGetter = busGetter;
             _options = options;
 
-            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: false, intervalSeconds: 1);
+            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: false, intervalSeconds: 2);
         }
 
         public void Initialize()
         {
-            _log.Info("Initializing circuit breaker");
-
             _configuredNumberOfWorkers = _options.NumberOfWorkers;
-            
+
+            _log.Info("Initializing circuit breaker with default number of workers = {count}", _configuredNumberOfWorkers);
+
             _resetCircuitBreakerTask.Start();
         }
 
@@ -58,12 +58,6 @@ namespace Rebus.CircuitBreaker
             return currentState;
         });
 
-        public bool IsClosed => _circuitBreakers.All(x => x.State == CircuitBreakerState.Closed);
-
-        public bool IsHalfOpen => State == CircuitBreakerState.HalfOpen;
-
-        public bool IsOpen => State == CircuitBreakerState.Open;
-
         public void Trip(Exception exception)
         {
             var previousState = State;
@@ -73,34 +67,42 @@ namespace Rebus.CircuitBreaker
                 circuitBreaker.Trip(exception);
             }
 
-            if (previousState == State)
+            var currentState = State;
+
+            if (previousState == currentState)
             {
                 return;
             }
 
-            _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, State);
-            _circuitBreakerEvents.RaiseCircuitBreakerChanged(State);
+            _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, currentState);
+            _circuitBreakerEvents.RaiseCircuitBreakerChanged(currentState);
+
+            if (currentState == CircuitBreakerState.Closed)
+            {
+                SetNumberOfWorkers(_configuredNumberOfWorkers);
+                return;
+            }
+
+            if (currentState == CircuitBreakerState.HalfOpen)
+            {
+                SetNumberOfWorkers(1);
+                return;
+            }
+
+            if (currentState == CircuitBreakerState.Open)
+            {
+                SetNumberOfWorkers(0);
+                return;
+            }
+        }
+
+        void SetNumberOfWorkers(int count)
+        {
+            _log.Info("Setting number of workers to {count}", count);
 
             var workers = Bus.Advanced.Workers;
 
-            if (IsClosed)
-            {
-                workers.SetNumberOfWorkers(_configuredNumberOfWorkers);
-                return;
-            }
-
-
-            if (IsHalfOpen)
-            {
-                workers.SetNumberOfWorkers(1);
-                return;
-            }
-
-            if (IsOpen)
-            {
-                workers.SetNumberOfWorkers(0);
-                return;
-            }
+            workers.SetNumberOfWorkers(count);
         }
 
         public async Task Reset()

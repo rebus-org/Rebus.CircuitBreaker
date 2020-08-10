@@ -37,9 +37,6 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
 
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Closed));
-            Assert.IsTrue(sut.IsClosed);
-            Assert.IsFalse(sut.IsHalfOpen);
-            Assert.IsFalse(sut.IsOpen);
         }
 
         [Test]
@@ -53,9 +50,6 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             }, rebusLoggerFactory, taskFactory, null, circuitBreakerEvents, new Options());
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.HalfOpen));
-            Assert.IsFalse(sut.IsClosed);
-            Assert.IsTrue(sut.IsHalfOpen);
-            Assert.IsFalse(sut.IsOpen);
         }
 
         [Test]
@@ -69,9 +63,6 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             }, new ConsoleLoggerFactory(false), taskFactory, null, circuitBreakerEvents, new Options());
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Open));
-            Assert.IsFalse(sut.IsClosed);
-            Assert.IsFalse(sut.IsHalfOpen);
-            Assert.IsTrue(sut.IsOpen);
         }
 
         [Test]
@@ -85,9 +76,6 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             }, rebusLoggerFactory, taskFactory, null, circuitBreakerEvents, new Options());
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Open));
-            Assert.IsFalse(sut.IsClosed);
-            Assert.IsFalse(sut.IsHalfOpen);
-            Assert.IsTrue(sut.IsOpen);
         }
 
         internal class FakeCircuitBreaker : ICircuitBreaker
@@ -98,12 +86,6 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             }
 
             public CircuitBreakerState State { get; private set; }
-
-            public bool IsClosed => State == CircuitBreakerState.Closed;
-
-            public bool IsHalfOpen => State == CircuitBreakerState.HalfOpen;
-
-            public bool IsOpen => State == CircuitBreakerState.Open;
 
             public void Trip(Exception exception)
             {

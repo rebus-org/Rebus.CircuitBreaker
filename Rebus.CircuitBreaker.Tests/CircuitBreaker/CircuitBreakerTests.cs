@@ -13,6 +13,7 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
     public class CircuitBreakerTests : FixtureBase
     {
         [Test]
+        [Explicit]
         public async Task CircuitBreakerIntegrationTest()
         {
             var network = new InMemNetwork();
