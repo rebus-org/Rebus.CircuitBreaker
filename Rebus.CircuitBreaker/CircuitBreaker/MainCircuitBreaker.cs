@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Rebus.Config;
+using Rebus.Pipeline;
 
 namespace Rebus.CircuitBreaker
 {
@@ -17,26 +18,23 @@ namespace Rebus.CircuitBreaker
 
         readonly IList<ICircuitBreaker> _circuitBreakers;
         readonly CircuitBreakerEvents _circuitBreakerEvents;
-        readonly Func<IBus> _busGetter;
         readonly Options _options;
+        readonly Lazy<IBus> _bus;
         readonly ILog _log;
 
         int _configuredNumberOfWorkers;
 
         bool _disposed;
 
-        IBus _bus;
-        IBus Bus => _bus ?? (_bus = _busGetter());
-
-        public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Func<IBus> busGetter, CircuitBreakerEvents circuitBreakerEvents, Options options)
+        public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Lazy<IBus> bus, CircuitBreakerEvents circuitBreakerEvents, Options options)
         {
             _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
             _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
+            _bus = bus ?? throw new ArgumentNullException(nameof(bus));
             _circuitBreakerEvents = circuitBreakerEvents;
-            _busGetter = busGetter;
             _options = options;
 
-            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: false, intervalSeconds: 2);
+            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: true, intervalSeconds: 2);
         }
 
         public void Initialize()
@@ -48,15 +46,7 @@ namespace Rebus.CircuitBreaker
             _resetCircuitBreakerTask.Start();
         }
 
-        public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) =>
-        {
-            if (incoming.State > currentState)
-            {
-                return incoming.State;
-            }
-
-            return currentState;
-        });
+        public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) => incoming.State > currentState ? incoming.State : currentState);
 
         public void Trip(Exception exception)
         {
@@ -100,9 +90,18 @@ namespace Rebus.CircuitBreaker
         {
             _log.Info("Setting number of workers to {count}", count);
 
-            var workers = Bus.Advanced.Workers;
+            var workers = _bus.Value.Advanced.Workers;
 
-            workers.SetNumberOfWorkers(count);
+            // if we're currently executing a message handler, we must execute the operation asynchronously,
+            // otherwise we'll end up with a deadlock
+            if (MessageContext.Current == null)
+            {
+                workers.SetNumberOfWorkers(count);
+            }
+            else
+            {
+                Task.Run(() => workers.SetNumberOfWorkers(count));
+            }
         }
 
         public async Task Reset()
@@ -114,7 +113,7 @@ namespace Rebus.CircuitBreaker
         }
 
         /// <summary>
-        /// Last-resort disposal of reset circuit breaker reset timer
+        /// disposal of reset circuit breaker reset timer
         /// </summary>
         public void Dispose()
         {

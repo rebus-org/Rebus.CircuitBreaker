@@ -33,11 +33,10 @@ namespace Rebus.Config
                 var loggerFactory = context.Get<IRebusLoggerFactory>();
                 var asyncTaskFactory = context.Get<IAsyncTaskFactory>();
                 var circuitBreakerEvents = context.Get<CircuitBreakerEvents>();
-                var bus = new Func<IBus>(context.Get<IBus>);
                 var options = context.Get<Options>();
                 var circuitBreakers = builder.Build(context);
 
-                return new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, bus, circuitBreakerEvents, options);
+                return new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, new Lazy<IBus>(context.Get<IBus>), circuitBreakerEvents, options);
             });
 
             configurer.Decorate<IErrorTracker>(context =>
