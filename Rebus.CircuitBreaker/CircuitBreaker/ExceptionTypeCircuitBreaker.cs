@@ -16,13 +16,12 @@ namespace Rebus.CircuitBreaker
         private readonly IRebusTime rebusTime;
         private readonly Type exceptionType;
 
-        public ExceptionTypeCircuitBreaker(Type exceptionType
-            , CircuitBreakerSettings settings
-            , IRebusTime rebusTime)
+        public ExceptionTypeCircuitBreaker(Type exceptionType, CircuitBreakerSettings settings, IRebusTime rebusTime)
         {
             this.exceptionType = exceptionType ?? throw new ArgumentNullException(nameof(exceptionType));
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
             this.rebusTime = rebusTime ?? throw new ArgumentNullException(nameof(rebusTime));
+            
             State = CircuitBreakerState.Closed;
 
             _errorDates = new ConcurrentDictionary<long, DateTimeOffset>();
@@ -39,7 +38,9 @@ namespace Rebus.CircuitBreaker
         public void Trip(Exception exception)
         {
             if (ShouldTripCircuitBreaker(exception) == false)
+            {
                 return;
+            }
 
             var timeStamp = rebusTime.Now;
             _errorDates.TryAdd(timeStamp.Ticks, timeStamp);
@@ -78,9 +79,9 @@ namespace Rebus.CircuitBreaker
                 .Take(1)
                 .FirstOrDefault();
 
-            if(latestError.Equals(default(KeyValuePair<int, DateTimeOffset>)))
-                return;   
-            
+            if (latestError.Equals(default(KeyValuePair<int, DateTimeOffset>)))
+                return;
+
             var currentTime = rebusTime.Now;
 
             if (currentTime > latestError.Value + settings.HalfOpenResetInterval)
@@ -99,7 +100,7 @@ namespace Rebus.CircuitBreaker
             if (exception is AggregateException aggregateException)
             {
                 var actualException = aggregateException.InnerExceptions.First();
-                
+
                 if (actualException.GetType() == exceptionType)
                 {
                     return true;
@@ -131,4 +132,4 @@ namespace Rebus.CircuitBreaker
             }
         }
     }
-} 
+}

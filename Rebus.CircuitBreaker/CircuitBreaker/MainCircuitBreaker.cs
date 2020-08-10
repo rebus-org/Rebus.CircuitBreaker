@@ -9,7 +9,7 @@ using Rebus.Config;
 
 namespace Rebus.CircuitBreaker
 {
-    internal class MainCircuitBreaker : ICircuitBreaker, IInitializable, IDisposable
+    internal class MainCircuitBreaker : IInitializable, IDisposable
     {
         const string BackgroundTaskName = "CircuitBreakersResetTimer";
 
@@ -36,7 +36,16 @@ namespace Rebus.CircuitBreaker
             _circuitBreakerEvents = circuitBreakerEvents;
             _options = options;
 
-            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: false, intervalSeconds: 5);
+            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: false, intervalSeconds: 1);
+        }
+
+        public void Initialize()
+        {
+            _log.Info("Initializing circuit breaker");
+
+            _configuredNumberOfWorkers = _options.NumberOfWorkers;
+            
+            _resetCircuitBreakerTask.Start();
         }
 
         public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) =>
@@ -100,15 +109,6 @@ namespace Rebus.CircuitBreaker
             {
                 await circuitBreaker.Reset();
             }
-        }
-
-        public void Initialize()
-        {
-            _log.Info("Initializing circuit breaker");
-
-            _configuredNumberOfWorkers = _options.NumberOfWorkers;
-            
-            _resetCircuitBreakerTask.Start();
         }
 
         /// <summary>

@@ -7,9 +7,9 @@ namespace Rebus.CircuitBreaker
     internal class CircuitBreakerErrorTracker : IErrorTracker
     {
         readonly IErrorTracker _innerErrorTracker;
-        readonly ICircuitBreaker _circuitBreaker;
+        readonly MainCircuitBreaker _circuitBreaker;
 
-        public CircuitBreakerErrorTracker(IErrorTracker innerErrorTracker, ICircuitBreaker circuitBreaker)
+        public CircuitBreakerErrorTracker(IErrorTracker innerErrorTracker, MainCircuitBreaker circuitBreaker)
         {
             _innerErrorTracker = innerErrorTracker;
             _circuitBreaker = circuitBreaker;

@@ -6,6 +6,8 @@ using Rebus.Threading;
 using Rebus.Time;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Rebus.Injection;
 
 namespace Rebus.Config
 {
@@ -23,7 +25,6 @@ namespace Rebus.Config
         {
             var builder = new CircuitBreakerConfigurationBuilder();
             circuitBreakerBuilder?.Invoke(builder);
-            var circuitBreakers = builder.Build();
 
             configurer.Register(context => new CircuitBreakerEvents());
 
@@ -34,6 +35,7 @@ namespace Rebus.Config
                 var circuitBreakerEvents = context.Get<CircuitBreakerEvents>();
                 var bus = new Func<IBus>(context.Get<IBus>);
                 var options = context.Get<Options>();
+                var circuitBreakers = builder.Build(context);
 
                 return new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, bus, circuitBreakerEvents, options);
             });
@@ -52,33 +54,28 @@ namespace Rebus.Config
         /// </summary>
         public class CircuitBreakerConfigurationBuilder
         {
-            private readonly IList<ICircuitBreaker> _circuitBreakerStores;
-
-            internal CircuitBreakerConfigurationBuilder()
-            {
-                _circuitBreakerStores = new List<ICircuitBreaker>();
-            }
+            readonly List<Func<IResolutionContext, ICircuitBreaker>> _circuitBreakerFactories = new List<Func<IResolutionContext, ICircuitBreaker>>();
 
             /// <summary>
             /// Register a circuit breaker based on an <typeparamref name="TException"/>
             /// </summary>
-            /// <typeparam name="TException"></typeparam>
+            /// <typeparam name="TException">Exception type to trip the circuit breaker on</typeparam>
             public CircuitBreakerConfigurationBuilder OpenOn<TException>(
-                int attempts = CircuitBreakerSettings.DefaultAttempts
-                , int trackingPeriodInSeconds = CircuitBreakerSettings.DefaultTrackingPeriodInSeconds
-                , int halfOpenPeriodInSeconds = CircuitBreakerSettings.DefaultHalfOpenResetInterval
-                , int resetIntervalInSeconds = CircuitBreakerSettings.DefaultCloseResetInterval)
+                int attempts = CircuitBreakerSettings.DefaultAttempts,
+                int trackingPeriodInSeconds = CircuitBreakerSettings.DefaultTrackingPeriodInSeconds,
+                int halfOpenPeriodInSeconds = CircuitBreakerSettings.DefaultHalfOpenResetInterval,
+                int resetIntervalInSeconds = CircuitBreakerSettings.DefaultCloseResetInterval
+                )
                 where TException : Exception
             {
                 var settings = new CircuitBreakerSettings(attempts, trackingPeriodInSeconds, halfOpenPeriodInSeconds, resetIntervalInSeconds);
-                _circuitBreakerStores.Add(new ExceptionTypeCircuitBreaker(typeof(TException), settings, new DefaultRebusTime()));
+
+                _circuitBreakerFactories.Add(context => new ExceptionTypeCircuitBreaker(typeof(TException), settings, context.Get<IRebusTime>()));
+
                 return this;
             }
 
-            internal IList<ICircuitBreaker> Build()
-            {
-                return _circuitBreakerStores;
-            }
+            internal IList<ICircuitBreaker> Build(IResolutionContext context) => _circuitBreakerFactories.Select(factory => factory(context)).ToList();
         }
     }
 }

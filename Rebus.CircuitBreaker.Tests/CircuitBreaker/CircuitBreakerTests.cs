@@ -25,7 +25,7 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
                   .Options(o => o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10)))
                   .Start();
 
-            receiver.Handle<string>(async (buss, context, message) => throw new MyCustomException());
+            receiver.Handle<string>(async _ => throw new MyCustomException());
 
             await bus.SendLocal("Uh oh, This is not gonna go well!");
 
