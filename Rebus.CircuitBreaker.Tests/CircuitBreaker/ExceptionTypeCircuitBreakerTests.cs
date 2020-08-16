@@ -20,21 +20,21 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
         }
 
         [Test]
-        public void Trip_WithOneAttemptTrippedOnce_DoesOpenCircuit()
+        public async Task Trip_WithOneAttemptTrippedOnce_DoesOpenCircuit()
         {
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(1, 2, 30, 60), time);
 
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Open));
         }
 
         [Test]
-        public void Trip_WithTwoAttemptTrippedOnce_DoesNotOpenCircuit()
+        public async Task Trip_WithTwoAttemptTrippedOnce_DoesNotOpenCircuit()
         {
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(2, 60, 30, 60), time);
 
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Closed));
         }
@@ -44,9 +44,9 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
         {
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(2, 2, 30, 180), time);
 
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
             await Task.Delay(TimeSpan.FromSeconds(3.1));
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
 
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Closed));
@@ -57,9 +57,9 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
         {
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(2, 60, 30, 180), time);
 
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
             await Task.Delay(TimeSpan.FromSeconds(2.5));
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
 
             Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Open));
         }
@@ -70,8 +70,8 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(2, 2, 4, 10), time);
 
             // Close The Circuit
-            sut.Trip(new MyCustomException());
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
 
             // Wait for half open interval
             await Task.Delay(TimeSpan.FromSeconds(5));
@@ -82,7 +82,7 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
 
             // Circuit breaker is in recovery state
             // Should the circuit breaker trip, rewind to open state
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
             Assert.IsTrue(sut.IsOpen);
         }
 
@@ -101,7 +101,7 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             const int halfOpenResetIntervalInSeconds = 4;
 
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(1, 2, halfOpenResetIntervalInSeconds, 10), time);
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
             Assert.IsTrue(sut.IsOpen);
 
             await Task.Delay(TimeSpan.FromSeconds(halfOpenResetIntervalInSeconds + 1));
@@ -117,7 +117,7 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
             const int closedResetIntervalInSeconds = 6;
             
             var sut = new ExceptionTypeCircuitBreaker(typeof(MyCustomException), new CircuitBreakerSettings(1, 2, 4, closedResetIntervalInSeconds), time);
-            sut.Trip(new MyCustomException());
+            await sut.Trip(new MyCustomException());
             Assert.IsTrue(sut.IsOpen);
 
             await Task.Delay(TimeSpan.FromSeconds(closedResetIntervalInSeconds + 1));
