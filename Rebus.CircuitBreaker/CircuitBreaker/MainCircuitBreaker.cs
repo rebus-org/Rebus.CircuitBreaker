@@ -48,22 +48,31 @@ namespace Rebus.CircuitBreaker
 
         public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) => incoming.State > currentState ? incoming.State : currentState);
 
-        public void Trip(Exception exception)
+        public async Task Trip(Exception exception)
+        {
+            await InvokeCircuitBreakerAction(circuitBreaker => circuitBreaker.Trip(exception));
+        }
+
+        async Task InvokeCircuitBreakerAction(Func<ICircuitBreaker, Task> circuitBreakerAction) 
         {
             var previousState = State;
 
             foreach (var circuitBreaker in _circuitBreakers)
             {
-                circuitBreaker.Trip(exception);
+                await circuitBreakerAction(circuitBreaker);
             }
 
             var currentState = State;
-
-            if (previousState == currentState)
+            if (currentState == previousState)
             {
                 return;
             }
 
+            ChangeCircuitBreakerState(previousState, currentState);
+        }
+
+        void ChangeCircuitBreakerState(CircuitBreakerState previousState, CircuitBreakerState currentState)
+        {
             _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, currentState);
             _circuitBreakerEvents.RaiseCircuitBreakerChanged(currentState);
 
@@ -86,6 +95,7 @@ namespace Rebus.CircuitBreaker
             }
         }
 
+
         void SetNumberOfWorkers(int count)
         {
             _log.Info("Setting number of workers to {count}", count);
@@ -106,10 +116,7 @@ namespace Rebus.CircuitBreaker
 
         public async Task Reset()
         {
-            foreach (var circuitBreaker in _circuitBreakers)
-            {
-                await circuitBreaker.Reset();
-            }
+            await InvokeCircuitBreakerAction(circuitBreaker => circuitBreaker.Reset());
         }
 
         /// <summary>

@@ -47,7 +47,7 @@ namespace Rebus.CircuitBreaker
 
         public void RegisterError(string messageId, Exception exception)
         {
-            _circuitBreaker.Trip(exception);
+            _circuitBreaker.Trip(exception).Wait();
         }
     }
 }

@@ -35,7 +35,7 @@ namespace Rebus.CircuitBreaker
 
         public bool IsOpen => State == CircuitBreakerState.Open;
 
-        public void Trip(Exception exception)
+        public async Task Trip(Exception exception)
         {
             if (ShouldTripCircuitBreaker(exception) == false)
             {
@@ -65,6 +65,8 @@ namespace Rebus.CircuitBreaker
             }
 
             RemoveOutOfPeriodErrors(errorsInPeriod);
+
+            await Task.FromResult(0);
         }
 
         public async Task Reset()
