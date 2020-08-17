@@ -1,5 +1,8 @@
 # Changelog
 
 ## 0.0.1
-* Initial release
+* Initial release - thanks [mclausen]
 
+
+
+[mclausen]: https://github.com/mclausen
