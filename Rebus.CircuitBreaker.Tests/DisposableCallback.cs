@@ -1,13 +1,12 @@
 ﻿using System;
 
-namespace Rebus.CircuitBreaker.Tests
+namespace Rebus.CircuitBreaker.Tests;
+
+class DisposableCallback : IDisposable
 {
-    class DisposableCallback : IDisposable
-    {
-        readonly Action _callback;
+    readonly Action _callback;
 
-        public DisposableCallback(Action callback) => _callback = callback;
+    public DisposableCallback(Action callback) => _callback = callback;
 
-        public void Dispose() => _callback();
-    }
+    public void Dispose() => _callback();
 }

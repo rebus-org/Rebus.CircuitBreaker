@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Rebus.CircuitBreaker
+namespace Rebus.CircuitBreaker;
+
+interface ICircuitBreaker
 {
-    internal interface ICircuitBreaker
-    {
-        CircuitBreakerState State { get; }
-        Task Trip(Exception exception);
-        Task Reset();
-    }
+    CircuitBreakerState State { get; }
+    Task Trip(Exception exception);
+    Task Reset();
 }

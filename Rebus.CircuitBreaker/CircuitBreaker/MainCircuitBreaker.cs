@@ -8,132 +8,131 @@ using System.Threading.Tasks;
 using Rebus.Config;
 using Rebus.Pipeline;
 
-namespace Rebus.CircuitBreaker
+namespace Rebus.CircuitBreaker;
+
+class MainCircuitBreaker : IInitializable, IDisposable
 {
-    internal class MainCircuitBreaker : IInitializable, IDisposable
+    const string BackgroundTaskName = "CircuitBreakersResetTimer";
+
+    readonly IAsyncTask _resetCircuitBreakerTask;
+
+    readonly IList<ICircuitBreaker> _circuitBreakers;
+    readonly CircuitBreakerEvents _circuitBreakerEvents;
+    readonly Options _options;
+    readonly Lazy<IBus> _bus;
+    readonly ILog _log;
+
+    int _configuredNumberOfWorkers;
+
+    bool _disposed;
+
+    public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Lazy<IBus> bus, CircuitBreakerEvents circuitBreakerEvents, Options options)
     {
-        const string BackgroundTaskName = "CircuitBreakersResetTimer";
+        _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
+        _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
+        _bus = bus ?? throw new ArgumentNullException(nameof(bus));
+        _circuitBreakerEvents = circuitBreakerEvents;
+        _options = options;
 
-        readonly IAsyncTask _resetCircuitBreakerTask;
+        _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: true, intervalSeconds: 2);
+    }
 
-        readonly IList<ICircuitBreaker> _circuitBreakers;
-        readonly CircuitBreakerEvents _circuitBreakerEvents;
-        readonly Options _options;
-        readonly Lazy<IBus> _bus;
-        readonly ILog _log;
+    public void Initialize()
+    {
+        _configuredNumberOfWorkers = _options.NumberOfWorkers;
 
-        int _configuredNumberOfWorkers;
+        _log.Info("Initializing circuit breaker with default number of workers = {count}", _configuredNumberOfWorkers);
 
-        bool _disposed;
+        _resetCircuitBreakerTask.Start();
+    }
 
-        public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Lazy<IBus> bus, CircuitBreakerEvents circuitBreakerEvents, Options options)
+    public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) => incoming.State > currentState ? incoming.State : currentState);
+
+    public async Task Trip(Exception exception)
+    {
+        await InvokeCircuitBreakerAction(circuitBreaker => circuitBreaker.Trip(exception));
+    }
+
+    async Task InvokeCircuitBreakerAction(Func<ICircuitBreaker, Task> circuitBreakerAction) 
+    {
+        var previousState = State;
+
+        foreach (var circuitBreaker in _circuitBreakers)
         {
-            _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
-            _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
-            _bus = bus ?? throw new ArgumentNullException(nameof(bus));
-            _circuitBreakerEvents = circuitBreakerEvents;
-            _options = options;
-
-            _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: true, intervalSeconds: 2);
+            await circuitBreakerAction(circuitBreaker);
         }
 
-        public void Initialize()
+        var currentState = State;
+        if (currentState == previousState)
         {
-            _configuredNumberOfWorkers = _options.NumberOfWorkers;
-
-            _log.Info("Initializing circuit breaker with default number of workers = {count}", _configuredNumberOfWorkers);
-
-            _resetCircuitBreakerTask.Start();
+            return;
         }
 
-        public CircuitBreakerState State => _circuitBreakers.Aggregate(CircuitBreakerState.Closed, (currentState, incoming) => incoming.State > currentState ? incoming.State : currentState);
+        ChangeCircuitBreakerState(previousState, currentState);
+    }
 
-        public async Task Trip(Exception exception)
+    void ChangeCircuitBreakerState(CircuitBreakerState previousState, CircuitBreakerState currentState)
+    {
+        _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, currentState);
+        _circuitBreakerEvents.RaiseCircuitBreakerChanged(currentState);
+
+        if (currentState == CircuitBreakerState.Closed)
         {
-            await InvokeCircuitBreakerAction(circuitBreaker => circuitBreaker.Trip(exception));
+            SetNumberOfWorkers(_configuredNumberOfWorkers);
+            return;
         }
 
-        async Task InvokeCircuitBreakerAction(Func<ICircuitBreaker, Task> circuitBreakerAction) 
+        if (currentState == CircuitBreakerState.HalfOpen)
         {
-            var previousState = State;
-
-            foreach (var circuitBreaker in _circuitBreakers)
-            {
-                await circuitBreakerAction(circuitBreaker);
-            }
-
-            var currentState = State;
-            if (currentState == previousState)
-            {
-                return;
-            }
-
-            ChangeCircuitBreakerState(previousState, currentState);
+            SetNumberOfWorkers(1);
+            return;
         }
 
-        void ChangeCircuitBreakerState(CircuitBreakerState previousState, CircuitBreakerState currentState)
+        if (currentState == CircuitBreakerState.Open)
         {
-            _log.Info("Circuit breaker changed from {PreviousState} to {State}", previousState, currentState);
-            _circuitBreakerEvents.RaiseCircuitBreakerChanged(currentState);
-
-            if (currentState == CircuitBreakerState.Closed)
-            {
-                SetNumberOfWorkers(_configuredNumberOfWorkers);
-                return;
-            }
-
-            if (currentState == CircuitBreakerState.HalfOpen)
-            {
-                SetNumberOfWorkers(1);
-                return;
-            }
-
-            if (currentState == CircuitBreakerState.Open)
-            {
-                SetNumberOfWorkers(0);
-                return;
-            }
+            SetNumberOfWorkers(0);
+            return;
         }
+    }
 
 
-        void SetNumberOfWorkers(int count)
+    void SetNumberOfWorkers(int count)
+    {
+        _log.Info("Setting number of workers to {count}", count);
+
+        var workers = _bus.Value.Advanced.Workers;
+
+        // if we're currently executing a message handler, we must execute the operation asynchronously,
+        // otherwise we'll end up with a deadlock
+        if (MessageContext.Current == null)
         {
-            _log.Info("Setting number of workers to {count}", count);
-
-            var workers = _bus.Value.Advanced.Workers;
-
-            // if we're currently executing a message handler, we must execute the operation asynchronously,
-            // otherwise we'll end up with a deadlock
-            if (MessageContext.Current == null)
-            {
-                workers.SetNumberOfWorkers(count);
-            }
-            else
-            {
-                Task.Run(() => workers.SetNumberOfWorkers(count));
-            }
+            workers.SetNumberOfWorkers(count);
         }
-
-        public async Task Reset()
+        else
         {
-            await InvokeCircuitBreakerAction(circuitBreaker => circuitBreaker.Reset());
+            Task.Run(() => workers.SetNumberOfWorkers(count));
         }
+    }
 
-        /// <summary>
-        /// disposal of reset circuit breaker reset timer
-        /// </summary>
-        public void Dispose()
+    public async Task Reset()
+    {
+        await InvokeCircuitBreakerAction(circuitBreaker => circuitBreaker.Reset());
+    }
+
+    /// <summary>
+    /// disposal of reset circuit breaker reset timer
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        try
         {
-            if (_disposed) return;
-
-            try
-            {
-                _resetCircuitBreakerTask.Dispose();
-            }
-            finally
-            {
-                _disposed = true;
-            }
+            _resetCircuitBreakerTask.Dispose();
+        }
+        finally
+        {
+            _disposed = true;
         }
     }
 }

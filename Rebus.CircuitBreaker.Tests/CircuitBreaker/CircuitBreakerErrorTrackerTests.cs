@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Rebus.Bus;
 using Rebus.Config;
@@ -9,87 +10,81 @@ using Rebus.TestHelpers;
 using Rebus.Threading;
 using Rebus.Threading.SystemThreadingTimer;
 
-namespace Rebus.CircuitBreaker.Tests.CircuitBreaker
+namespace Rebus.CircuitBreaker.Tests.CircuitBreaker;
+
+[TestFixture]
+public class CircuitBreakerErrorTrackerTests
 {
-    [TestFixture]
-    public class CircuitBreakerErrorTrackerTests
+    ConsoleLoggerFactory rebusLoggerFactory;
+    IAsyncTaskFactory taskFactory;
+    Lazy<IBus> fakeBus;
+    CircuitBreakerEvents circuitBreakerEvents;
+
+    [SetUp]
+    public void Setup()
     {
-        private ConsoleLoggerFactory rebusLoggerFactory;
-        IAsyncTaskFactory taskFactory;
-        Lazy<IBus> fakeBus;
-        CircuitBreakerEvents circuitBreakerEvents;
+        rebusLoggerFactory = new ConsoleLoggerFactory(false);
+        taskFactory = new SystemThreadingTimerAsyncTaskFactory(rebusLoggerFactory);
+        circuitBreakerEvents = new CircuitBreakerEvents();
+        fakeBus = new Lazy<IBus>(new FakeBus());
+    }
 
-        [SetUp]
-        public void Setup()
+    MainCircuitBreaker EmptyCircuitBreaker() => new MainCircuitBreaker(new List<ICircuitBreaker>()
+        , rebusLoggerFactory
+        , taskFactory
+        , fakeBus
+        , circuitBreakerEvents, new Options());
+
+    [Test]
+    public async Task RegisterError_Should_Register_Exception_In_Inner_ErrorTracker()
+    {
+        var emptyCircuitBreaker = EmptyCircuitBreaker();
+        var exceptionRegisteredInInnerErrorHandler = false;
+        var errorTrackerStub = new TestableErrorTrackerStub((messageId, exception) => exceptionRegisteredInInnerErrorHandler = true);
+        var sut = new CircuitBreakerErrorTracker(errorTrackerStub, emptyCircuitBreaker);
+
+        await sut.RegisterError(Guid.NewGuid().ToString(), new Exception(":/"));
+
+        Assert.True(exceptionRegisteredInInnerErrorHandler);
+    }
+
+    class TestableErrorTrackerStub : IErrorTracker
+    {
+        readonly Action<string, Exception> _registerErrorCallBack;
+
+        public TestableErrorTrackerStub(Action<string, Exception> registerErrorCallBack = null)
         {
-            rebusLoggerFactory = new ConsoleLoggerFactory(false);
-            taskFactory = new SystemThreadingTimerAsyncTaskFactory(rebusLoggerFactory);
-            circuitBreakerEvents = new CircuitBreakerEvents();
-            fakeBus = new Lazy<IBus>(new FakeBus());
+            _registerErrorCallBack = registerErrorCallBack;
         }
 
-        private MainCircuitBreaker EmptyCircuitBreaker() => new MainCircuitBreaker(new List<ICircuitBreaker>()
-            , rebusLoggerFactory
-            , taskFactory
-            , fakeBus
-            , circuitBreakerEvents, new Options());
-
-        [Test]
-        public void RegisterError_Should_Register_Exception_In_Inner_ErrorTracker()
+        public async Task RegisterError(string messageId, Exception exception)
         {
-            var emptyCircuitBreaker = EmptyCircuitBreaker();
-            var exceptionRegisteredInInnerErrorHandler = false;
-            var errorTrackerStub = new TestableErrorTrackerStub((messageId, exception) => exceptionRegisteredInInnerErrorHandler = true);
-            var sut = new CircuitBreakerErrorTracker(errorTrackerStub, emptyCircuitBreaker);
-            
-            sut.RegisterError(Guid.NewGuid().ToString(), new Exception(":/"));
-            
-            Assert.True(exceptionRegisteredInInnerErrorHandler);
+            _registerErrorCallBack?.Invoke(messageId, exception);
         }
-        
-        private class TestableErrorTrackerStub  : IErrorTracker
+
+        public Task CleanUp(string messageId)
         {
-            private readonly Action<string, Exception> _registerErrorCallBack;
+            throw new NotImplementedException();
+        }
 
-            public TestableErrorTrackerStub(Action<string, Exception> registerErrorCallBack = null)
-            {
-                _registerErrorCallBack = registerErrorCallBack;
-            }
-            
-            public void RegisterError(string messageId, Exception exception)
-            {
-                _registerErrorCallBack?.Invoke(messageId, exception);
-            }
+        public Task<bool> HasFailedTooManyTimes(string messageId)
+        {
+            throw new NotImplementedException();
+        }
 
-            public void CleanUp(string messageId)
-            {
-                throw new NotImplementedException();
-            }
+        public Task<string> GetFullErrorDescription(string messageId)
+        {
+            throw new NotImplementedException();
+        }
 
-            public bool HasFailedTooManyTimes(string messageId)
-            {
-                throw new NotImplementedException();
-            }
+        public Task<IReadOnlyList<Exception>> GetExceptions(string messageId)
+        {
+            throw new NotImplementedException();
+        }
 
-            public string GetShortErrorDescription(string messageId)
-            {
-                throw new NotImplementedException();
-            }
-
-            public string GetFullErrorDescription(string messageId)
-            {
-                throw new NotImplementedException();
-            }
-
-            public IEnumerable<Exception> GetExceptions(string messageId)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void MarkAsFinal(string messageId)
-            {
-                throw new NotImplementedException();
-            }
+        public Task MarkAsFinal(string messageId)
+        {
+            throw new NotImplementedException();
         }
     }
 }
