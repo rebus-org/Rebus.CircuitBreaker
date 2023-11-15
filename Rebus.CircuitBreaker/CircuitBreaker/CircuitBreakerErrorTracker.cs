@@ -18,7 +18,7 @@ class CircuitBreakerErrorTracker : IErrorTracker
 
     public Task CleanUp(string messageId) => _innerErrorTracker.CleanUp(messageId);
 
-    public Task<IReadOnlyList<Exception>> GetExceptions(string messageId) => _innerErrorTracker.GetExceptions(messageId);
+    public Task<IReadOnlyList<ExceptionInfo>> GetExceptions(string messageId) => _innerErrorTracker.GetExceptions(messageId);
 
     public Task<string> GetFullErrorDescription(string messageId) => _innerErrorTracker.GetFullErrorDescription(messageId);
 

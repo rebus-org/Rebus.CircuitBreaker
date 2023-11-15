@@ -29,7 +29,7 @@ public class CircuitBreakerErrorTrackerTests
         fakeBus = new Lazy<IBus>(new FakeBus());
     }
 
-    MainCircuitBreaker EmptyCircuitBreaker() => new MainCircuitBreaker(new List<ICircuitBreaker>()
+    MainCircuitBreaker EmptyCircuitBreaker() => new(new List<ICircuitBreaker>()
         , rebusLoggerFactory
         , taskFactory
         , fakeBus
@@ -77,7 +77,7 @@ public class CircuitBreakerErrorTrackerTests
             throw new NotImplementedException();
         }
 
-        public Task<IReadOnlyList<Exception>> GetExceptions(string messageId)
+        public Task<IReadOnlyList<ExceptionInfo>> GetExceptions(string messageId)
         {
             throw new NotImplementedException();
         }

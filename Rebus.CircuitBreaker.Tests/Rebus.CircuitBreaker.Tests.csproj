@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="microsoft.net.test.sdk" Version="17.5.0" />
-    <PackageReference Include="nunit" Version="3.13.3" />
-    <PackageReference Include="nunit3testadapter" Version="4.4.2" />
-    <PackageReference Include="Rebus.TestHelpers" Version="9.0.0-alpha1" />
+    <PackageReference Include="microsoft.net.test.sdk" Version="17.8.0" />
+    <PackageReference Include="nunit" Version="3.14.0" />
+    <PackageReference Include="nunit3testadapter" Version="4.5.0" />
+    <PackageReference Include="Rebus.TestHelpers" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
