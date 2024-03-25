@@ -26,6 +26,15 @@ public static class CircuitBreakerConfigurationExtensions
         var builder = new CircuitBreakerConfigurationBuilder();
         circuitBreakerBuilder?.Invoke(builder);
 
+        //capture initial worker count for bus starter compatibility
+        var initialWorkerCount = 0;
+        configurer.Decorate(c =>
+        {
+            var options = c.Get<Options>();
+            initialWorkerCount = options.NumberOfWorkers;
+            return options;
+        });
+
         configurer.Register(context => new CircuitBreakerEvents());
 
         configurer.Register(context =>
@@ -33,10 +42,9 @@ public static class CircuitBreakerConfigurationExtensions
             var loggerFactory = context.Get<IRebusLoggerFactory>();
             var asyncTaskFactory = context.Get<IAsyncTaskFactory>();
             var circuitBreakerEvents = context.Get<CircuitBreakerEvents>();
-            var options = context.Get<Options>();
             var circuitBreakers = builder.Build(context);
 
-            return new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, new Lazy<IBus>(context.Get<IBus>), circuitBreakerEvents, options);
+            return new MainCircuitBreaker(circuitBreakers, loggerFactory, asyncTaskFactory, new Lazy<IBus>(context.Get<IBus>), circuitBreakerEvents, initialWorkerCount);
         });
 
         configurer.Decorate<IErrorTracker>(context =>
