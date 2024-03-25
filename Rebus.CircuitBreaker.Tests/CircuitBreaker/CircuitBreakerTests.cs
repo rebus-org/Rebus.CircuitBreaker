@@ -15,12 +15,15 @@ namespace Rebus.CircuitBreaker.Tests.CircuitBreaker;
 public class CircuitBreakerTests : FixtureBase
 {
     [Test]
-    public async Task OpensCircuitBreakerOnException()
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task OpensCircuitBreakerOnException(bool useBusStarter)
     {
         var bus = ConfigureBus(
             handlers: a => a.Handle<string>(async _ => throw new MyCustomException()),
-            options: o => o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10))
-        );
+            options: o => o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10)),
+            useBusStarter
+            );
 
         await bus.SendLocal("Uh oh, This is not gonna go well!");
 
@@ -32,7 +35,9 @@ public class CircuitBreakerTests : FixtureBase
     }
 
     [Test]
-    public async Task OpensCircuitBreakerAgainAfterLittleWhile()
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task OpensCircuitBreakerAgainAfterLittleWhile(bool useBusStarter)
     {
         var deliveryCount = 0;
 
@@ -49,7 +54,11 @@ public class CircuitBreakerTests : FixtureBase
 
                 throw new MyCustomException();
             }),
-            options: o => o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10, halfOpenPeriodInSeconds: 20, resetIntervalInSeconds: 30))
+            options: o =>
+            {
+                o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10, halfOpenPeriodInSeconds: 20, resetIntervalInSeconds: 30));
+            },
+            useBusStarter
         );
 
         await bus.SendLocal("Uh oh, This is not gonna go well!");
@@ -61,18 +70,25 @@ public class CircuitBreakerTests : FixtureBase
         Assert.That(workerCount, Is.EqualTo(1), $"Expected worker count to be '1' after waiting the entire reset interval plus some more, but was {workerCount}");
     }
 
-    IBus ConfigureBus(Action<BuiltinHandlerActivator> handlers, Action<OptionsConfigurer> options)
+    IBus ConfigureBus(Action<BuiltinHandlerActivator> handlers, Action<OptionsConfigurer> options, bool useBusStarter)
     {
         var network = new InMemNetwork();
         var activator = Using(new BuiltinHandlerActivator());
 
         handlers(activator);
 
-        return Configure.With(activator)
+        var configurer = Configure.With(activator)
             .Logging(l => l.Console(minLevel: LogLevel.Debug))
             .Transport(t => t.UseInMemoryTransport(network, "queue-a"))
-            .Options(options)
-            .Start();
+            .Options(options);
+
+        if (useBusStarter)
+        {
+            var starter = configurer.Create();
+            return starter.Start();
+        }
+
+        return configurer.Start();
     }
 
     class MyCustomException : Exception { }

@@ -33,7 +33,7 @@ public class CircuitBreakerErrorTrackerTests
         , rebusLoggerFactory
         , taskFactory
         , fakeBus
-        , circuitBreakerEvents, new Options());
+        , circuitBreakerEvents, 1);
 
     [Test]
     public async Task RegisterError_Should_Register_Exception_In_Inner_ErrorTracker()

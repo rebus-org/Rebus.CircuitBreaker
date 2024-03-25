@@ -37,7 +37,7 @@ public class MainCircuitBreakerTests
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
-        }, rebusLoggerFactory, taskFactory, fakeBus, circuitBreakerEvents, new Options());
+        }, rebusLoggerFactory, taskFactory, fakeBus, circuitBreakerEvents, 1);
 
 
         Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Closed));
@@ -51,7 +51,7 @@ public class MainCircuitBreakerTests
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
             new FakeCircuitBreaker(CircuitBreakerState.HalfOpen),
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
-        }, rebusLoggerFactory, taskFactory, fakeBus, circuitBreakerEvents, new Options());
+        }, rebusLoggerFactory, taskFactory, fakeBus, circuitBreakerEvents, 1);
 
         Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.HalfOpen));
     }
@@ -64,7 +64,7 @@ public class MainCircuitBreakerTests
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
             new FakeCircuitBreaker(CircuitBreakerState.Open),
-        }, new ConsoleLoggerFactory(false), taskFactory, fakeBus, circuitBreakerEvents, new Options());
+        }, new ConsoleLoggerFactory(false), taskFactory, fakeBus, circuitBreakerEvents, 1);
 
         Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Open));
     }
@@ -77,7 +77,7 @@ public class MainCircuitBreakerTests
             new FakeCircuitBreaker(CircuitBreakerState.HalfOpen),
             new FakeCircuitBreaker(CircuitBreakerState.Closed),
             new FakeCircuitBreaker(CircuitBreakerState.Open),
-        }, rebusLoggerFactory, taskFactory, fakeBus, circuitBreakerEvents, new Options());
+        }, rebusLoggerFactory, taskFactory, fakeBus, circuitBreakerEvents, 1);
 
         Assert.That(sut.State, Is.EqualTo(CircuitBreakerState.Open));
     }

@@ -18,29 +18,26 @@ class MainCircuitBreaker : IInitializable, IDisposable
 
     readonly IList<ICircuitBreaker> _circuitBreakers;
     readonly CircuitBreakerEvents _circuitBreakerEvents;
-    readonly Options _options;
     readonly Lazy<IBus> _bus;
     readonly ILog _log;
 
-    int _configuredNumberOfWorkers;
+    readonly int _configuredNumberOfWorkers;
 
     bool _disposed;
 
-    public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Lazy<IBus> bus, CircuitBreakerEvents circuitBreakerEvents, Options options)
+    public MainCircuitBreaker(IList<ICircuitBreaker> circuitBreakers, IRebusLoggerFactory rebusLoggerFactory, IAsyncTaskFactory asyncTaskFactory, Lazy<IBus> bus, CircuitBreakerEvents circuitBreakerEvents, int initialWorkerCount)
     {
         _log = rebusLoggerFactory?.GetLogger<MainCircuitBreaker>() ?? throw new ArgumentNullException(nameof(rebusLoggerFactory));
         _circuitBreakers = circuitBreakers ?? new List<ICircuitBreaker>();
         _bus = bus ?? throw new ArgumentNullException(nameof(bus));
         _circuitBreakerEvents = circuitBreakerEvents;
-        _options = options;
+        _configuredNumberOfWorkers = initialWorkerCount;
 
         _resetCircuitBreakerTask = asyncTaskFactory.Create(BackgroundTaskName, Reset, prettyInsignificant: true, intervalSeconds: 2);
     }
 
     public void Initialize()
     {
-        _configuredNumberOfWorkers = _options.NumberOfWorkers;
-
         _log.Info("Initializing circuit breaker with default number of workers = {count}", _configuredNumberOfWorkers);
 
         _resetCircuitBreakerTask.Start();
@@ -91,7 +88,6 @@ class MainCircuitBreaker : IInitializable, IDisposable
         if (currentState == CircuitBreakerState.Open)
         {
             SetNumberOfWorkers(0);
-            return;
         }
     }
 
