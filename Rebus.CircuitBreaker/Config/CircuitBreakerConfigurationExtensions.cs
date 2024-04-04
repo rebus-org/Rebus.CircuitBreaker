@@ -35,7 +35,7 @@ public static class CircuitBreakerConfigurationExtensions
             return options;
         });
 
-        configurer.Register(context => new CircuitBreakerEvents());
+        configurer.Register(_ => new CircuitBreakerEvents());
 
         configurer.Register(context =>
         {
@@ -61,7 +61,7 @@ public static class CircuitBreakerConfigurationExtensions
     /// </summary>
     public class CircuitBreakerConfigurationBuilder
     {
-        readonly List<Func<IResolutionContext, ICircuitBreaker>> _circuitBreakerFactories = new List<Func<IResolutionContext, ICircuitBreaker>>();
+        readonly List<Func<IResolutionContext, ICircuitBreaker>> _circuitBreakerFactories = new();
 
         /// <summary>
         /// Register a circuit breaker based on an <typeparamref name="TException"/>

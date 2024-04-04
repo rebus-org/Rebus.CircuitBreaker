@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Rebus.Config;
 using Rebus.Pipeline;
 
 namespace Rebus.CircuitBreaker;

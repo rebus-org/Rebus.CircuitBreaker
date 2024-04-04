@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Rebus.Bus;
-using Rebus.Config;
 using Rebus.Logging;
 using Rebus.TestHelpers;
 using Rebus.Threading;

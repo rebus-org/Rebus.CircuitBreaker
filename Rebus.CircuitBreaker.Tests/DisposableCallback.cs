@@ -2,11 +2,7 @@
 
 namespace Rebus.CircuitBreaker.Tests;
 
-class DisposableCallback : IDisposable
+class DisposableCallback(Action callback) : IDisposable
 {
-    readonly Action _callback;
-
-    public DisposableCallback(Action callback) => _callback = callback;
-
-    public void Dispose() => _callback();
+    public void Dispose() => callback();
 }

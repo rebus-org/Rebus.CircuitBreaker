@@ -5,31 +5,22 @@ using System.Threading.Tasks;
 
 namespace Rebus.CircuitBreaker;
 
-class CircuitBreakerErrorTracker : IErrorTracker
+class CircuitBreakerErrorTracker(IErrorTracker innerErrorTracker, MainCircuitBreaker circuitBreaker) : IErrorTracker
 {
-    readonly IErrorTracker _innerErrorTracker;
-    readonly MainCircuitBreaker _circuitBreaker;
+    public Task CleanUp(string messageId) => innerErrorTracker.CleanUp(messageId);
 
-    public CircuitBreakerErrorTracker(IErrorTracker innerErrorTracker, MainCircuitBreaker circuitBreaker)
-    {
-        _innerErrorTracker = innerErrorTracker;
-        _circuitBreaker = circuitBreaker;
-    }
+    public Task<IReadOnlyList<ExceptionInfo>> GetExceptions(string messageId) => innerErrorTracker.GetExceptions(messageId);
 
-    public Task CleanUp(string messageId) => _innerErrorTracker.CleanUp(messageId);
+    public Task<string> GetFullErrorDescription(string messageId) => innerErrorTracker.GetFullErrorDescription(messageId);
 
-    public Task<IReadOnlyList<ExceptionInfo>> GetExceptions(string messageId) => _innerErrorTracker.GetExceptions(messageId);
+    public Task<bool> HasFailedTooManyTimes(string messageId) => innerErrorTracker.HasFailedTooManyTimes(messageId);
 
-    public Task<string> GetFullErrorDescription(string messageId) => _innerErrorTracker.GetFullErrorDescription(messageId);
-
-    public Task<bool> HasFailedTooManyTimes(string messageId) => _innerErrorTracker.HasFailedTooManyTimes(messageId);
-
-    public Task MarkAsFinal(string messageId) => _innerErrorTracker.MarkAsFinal(messageId);
+    public Task MarkAsFinal(string messageId) => innerErrorTracker.MarkAsFinal(messageId);
 
     public async Task RegisterError(string messageId, Exception exception)
     {
-        await _circuitBreaker.Trip(exception);
+        await circuitBreaker.Trip(exception);
 
-        await _innerErrorTracker.RegisterError(messageId, exception);
+        await innerErrorTracker.RegisterError(messageId, exception);
     }
 }

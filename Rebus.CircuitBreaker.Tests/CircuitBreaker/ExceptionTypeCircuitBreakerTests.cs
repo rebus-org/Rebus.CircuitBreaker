@@ -8,11 +8,10 @@ using Rebus.Time;
 namespace Rebus.CircuitBreaker.Tests.CircuitBreaker;
 
 [TestFixture]
-public class ExceptionTypeCircuitBreakerTests 
+public class ExceptionTypeCircuitBreakerTests
 {
     IRebusTime time;
-
-
+    
     [SetUp]
     public void Setup()
     {

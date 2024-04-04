@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Rebus.CircuitBreaker.Tests;
 
-public static class DeleteHelper
+static class DeleteHelper
 {
     /// <summary>
     /// Recursively deletes the directory and everything in it, trying a couple of times if it fails
