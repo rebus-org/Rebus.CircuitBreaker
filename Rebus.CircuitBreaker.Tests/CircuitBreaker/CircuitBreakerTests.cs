@@ -69,6 +69,35 @@ public class CircuitBreakerTests : FixtureBase
 
         Assert.That(workerCount, Is.EqualTo(1), $"Expected worker count to be '1' after waiting the entire reset interval plus some more, but was {workerCount}");
     }
+    
+    [Test]
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task WaitHalfOpenPeriodBeforeHalfOpening(bool useBusStarter)
+    {
+        var deliveryCount = 0;
+
+        var bus = ConfigureBus(
+            handlers: a => a.Handle<string>(async _ =>
+            {
+                deliveryCount++;
+                throw new MyCustomException();
+            }),
+            options: o =>
+            {
+                o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10, halfOpenPeriodInSeconds: 20, resetIntervalInSeconds: 30));
+            },
+            useBusStarter
+        );
+
+        await bus.SendLocal("Uh oh, This is not gonna go well!");
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        Assert.That(deliveryCount, Is.EqualTo(1), $"Expect message delivery count to be '1' after circuit has transitioned from closed -> open");
+
+        await Task.Delay(TimeSpan.FromSeconds(20));
+        Assert.That(deliveryCount, Is.EqualTo(2), $"Expect message delivery count to be '2' after circuit has cycled from closed -> open -> halfopen -> open");
+    }
 
     IBus ConfigureBus(Action<BuiltinHandlerActivator> handlers, Action<OptionsConfigurer> options, bool useBusStarter)
     {
