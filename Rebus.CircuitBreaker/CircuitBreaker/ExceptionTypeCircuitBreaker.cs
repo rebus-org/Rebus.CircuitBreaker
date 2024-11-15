@@ -77,7 +77,7 @@ class ExceptionTypeCircuitBreaker : ICircuitBreaker
         }
 
         var latestError = _errorDates
-            .OrderBy(x => x.Key)
+            .OrderByDescending(x => x.Key)
             .Take(1)
             .FirstOrDefault();
 
