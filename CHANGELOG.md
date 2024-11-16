@@ -12,7 +12,11 @@
 ## 0.0.4
 * Fix bug that would prevent setting number of threads and using delayed bus start together - thanks [jwoots]
 
+## 0.0.5
+* Fix timing of circuit state changes - thanks [gian-hancock]
+
 ---------
 
+[gian-hancock]: https://github.com/gian-hancock
 [jwoots]: https://github.com/jwoots
 [mclausen]: https://github.com/mclausen
