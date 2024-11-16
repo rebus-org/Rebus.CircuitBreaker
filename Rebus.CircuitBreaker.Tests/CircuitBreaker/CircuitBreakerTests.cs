@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Rebus.Activation;
 using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Logging;
+using Rebus.Retry.Simple;
 using Rebus.Transport.InMem;
 // ReSharper disable ArgumentsStyleAnonymousFunction
 #pragma warning disable 1998
@@ -75,17 +78,28 @@ public class CircuitBreakerTests : FixtureBase
     [TestCase(false)]
     public async Task WaitHalfOpenPeriodBeforeHalfOpening(bool useBusStarter)
     {
+        var stateChanges = new List<CircuitBreakerState>();
+        var events = new CircuitBreakerEvents();
+        events.CircuitBreakerChanged += (CircuitBreakerState newState) =>
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Circuit breaker state changed {stateChanges.LastOrDefault()} -> {newState}");
+            stateChanges.Add(newState);
+        };
+
         var deliveryCount = 0;
 
         var bus = ConfigureBus(
             handlers: a => a.Handle<string>(async _ =>
             {
                 deliveryCount++;
+                await Task.Delay(500); // Make handler take reasonable amount of time.
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] DeliveryCount: {deliveryCount}");
                 throw new MyCustomException();
             }),
             options: o =>
             {
                 o.EnableCircuitBreaker(c => c.OpenOn<MyCustomException>(attempts: 1, trackingPeriodInSeconds: 10, halfOpenPeriodInSeconds: 20, resetIntervalInSeconds: 30));
+                o.Decorate(c => events);
             },
             useBusStarter
         );
@@ -93,10 +107,12 @@ public class CircuitBreakerTests : FixtureBase
         await bus.SendLocal("Uh oh, This is not gonna go well!");
 
         await Task.Delay(TimeSpan.FromSeconds(10));
-        Assert.That(deliveryCount, Is.EqualTo(1), $"Expect message delivery count to be '1' after circuit has transitioned from closed -> open");
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Assert state changes -> open");
+        Assert.That(stateChanges, Is.EquivalentTo(new CircuitBreakerState[] { CircuitBreakerState.Open }), $"[{DateTime.Now:HH:mm:ss.fff}] Expect state transition -> open after first error but before halfOpenPeriod");
 
         await Task.Delay(TimeSpan.FromSeconds(20));
-        Assert.That(deliveryCount, Is.EqualTo(2), $"Expect message delivery count to be '2' after circuit has cycled from closed -> open -> halfopen -> open");
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Assert state changes -> open -> half open -> open");
+        Assert.That(stateChanges, Is.EquivalentTo(new CircuitBreakerState[] { CircuitBreakerState.Open, CircuitBreakerState.HalfOpen, CircuitBreakerState.Open }), $"[{DateTime.Now:HH:mm:ss.fff}] Expect state transitions -> open -> half open -> open after halfOpenPeriod");
     }
 
     IBus ConfigureBus(Action<BuiltinHandlerActivator> handlers, Action<OptionsConfigurer> options, bool useBusStarter)
